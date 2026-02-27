@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Kesiswaan SMK N 14 Samarinda - AKL</title>
+    <!-- Library SheetJS untuk Export Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --primary: #2c3e50;
+            --primary-dark: #1a252f;
+            --accent: #2980b9;
+            --accent-light: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #c0392b;
+            --light: #ecf0f1;
+            --white: #ffffff;
+            --shadow: 0 8px 30px rgba(0,0,0,0.12);
+            --radius: 12px;
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            font-family: var(--font-family);
+            /* Background Menarik */
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            margin: 0;
+            padding: 0;
+            color: var(--primary-dark);
+            min-height: 100vh;
+        }
+
+        /* --- UTILITIES --- */
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 1rem; }
+        .mt-2 { margin-top: 1rem; }
+        .text-center { text-align: center; }
+        .text-danger { color: var(--danger); }
+        .text-success { color: var(--success); }
+
+        /* --- LOGIN SCREEN --- */
+        .login-wrapper {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            width: 90%; max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            animation: slideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .school-logo-lg {
+            width: 100px; height: 100px;
+            object-fit: contain;
+            margin-bottom: 15px;
+        }
+
+        /* --- DASHBOARD LAYOUT --- */
+        .app-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        /* Header */
+        header {
+            background: var(--white);
+            padding: 20px 30px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 5px solid var(--accent);
+        }
+
+        .header-brand { display: flex; align-items: center; gap: 15px; }
+        .header-logo { width: 60px; height: 60px; object-fit: contain; }
+        .header-title h1 { margin: 0; font-size: 1.4rem; color: var(--primary); line-height: 1.2; }
+        .header-title p { margin: 5px 0 0; font-size: 0.9rem; color: #7f8c8d; }
+        
+        .clock-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent);
+            background: #ecf0f1;
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid #bdc3c7;
+        }
+
+        /* Grid System */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 1000px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .header-brand { flex-direction: column; text-align: center; }
+            header { flex-direction: column; gap: 15px; text-align: center; }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            height: fit-content;
+        }
+
+        .card-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f2f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h3 { margin: 0; font-size: 1.1rem; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+
+        /* Forms */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--primary); }
+        
+        select, input[type="text"], input[type="password"], textarea {
+            width: 100%; padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            transition: 0.3s;
+            background: #fafafa;
+            font-family: inherit;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(41, 128, 185, 0.1);
+        }
+
+        /* File Input Styling */
+        .file-upload-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100px;
+            border: 2px dashed #bdc3c7;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f9f9f9;
+            cursor: pointer;
+            transition: 0.3s;
+            flex-direction: column;
+            color: #7f8c8d;
+            overflow: hidden;
+        }
+        .file-upload-wrapper:hover { border-color: var(--accent); background: #eaf2f8; color: var(--accent); }
+        .file-upload-wrapper input[type="file"] {
+            position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+        }
+        .preview-img { max-height: 80px; margin-bottom: 5px; border-radius: 4px; display: none; }
+
+        /* Checkbox Groups */
+        .violation-group {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .violation-group-title {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex; justify-content: space-between;
+        }
+        .violation-items { display: grid; grid-template-columns: 1fr; gap: 5px; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer; color: #555; }
+        .checkbox-label input { width: auto; margin: 0; }
+
+        /* Buttons */
+        .btn {
+            background: var(--accent);
+            color: white; border: none;
+            padding: 12px 20px; border-radius: 10px;
+            cursor: pointer; font-weight: 600;
+            width: 100%; transition: 0.3s;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+            font-size: 0.95rem;
+        }
+        .btn:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(44, 62, 80, 0.2); }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-secondary { background: var(--success); }
+        .btn-secondary:hover { background: #219150; }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #a93226; }
+
+        .btn-outline {
+            background: transparent; border: 2px solid var(--accent); color: var(--accent);
+        }
+        .btn-outline:hover { background: var(--accent); color: white; }
+
+        /* Table */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 800px; }
+        th { 
+            background: var(--primary); color: white; text-align: left; padding: 15px; 
+            font-weight: 600; font-size: 0.9rem; white-space: nowrap;
+        }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; color: #555; vertical-align: top; font-size: 0.9rem; }
+        tr:hover { background-color: #f8f9fa; }
+
+        .evidence-thumb {
+            height: 60px; width: 60px; object-fit: cover;
+            border-radius: 6px; border: 1px solid #ddd; cursor: pointer;
+            transition: 0.2s;
+        }
+        .evidence-thumb:hover { transform: scale(1.1); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        /* Badges */
+        .badge {
+            padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; display: inline-block;
+        }
+        .badge-ringan { background: #d5f5e3; color: #27ae60; border: 1px solid #abebc6; }
+        .badge-sedang { background: #fdebd0; color: #d35400; border: 1px solid #fad7a0; }
+        .badge-berat { background: #fadbd8; color: #c0392b; border: 1px solid #f5b7b1; }
+
+        /* Toast & Animation */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 3000; }
+        .toast {
+            background: white; padding: 15px 25px; border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); margin-bottom: 10px;
+            display: flex; align-items: center; gap: 10px;
+            animation: slideInRight 0.3s ease-out forwards;
+            border-left: 5px solid var(--accent); min-width: 300px;
+        }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .empty-state { text-align: center; padding: 50px; color: #95a5a6; }
+        .empty-state svg { width: 60px; height: 60px; margin-bottom: 15px; fill: #dcdde1; }
+
+        /* --- PRINT STYLES (PDF) --- */
+        @media print {
+            body { background: white; -webkit-print-color-adjust: exact; }
+            .login-wrapper, .btn, .form-group, .card-header button, .dashboard-grid > div:first-child, #actionButtons, .file-upload-wrapper, .btn-logout, .clock-display { display: none !important; }
+            .app-container { max-width: 100%; margin: 0; padding: 0; display: block; }
+            header { box-shadow: none; border: none; padding: 0; margin-bottom: 20px; text-align: center; }
+            .dashboard-grid { display: block; }
+            .card { box-shadow: none; padding: 0; border: none; }
+            .table-container { overflow: visible; }
+            table { border: 1px solid #000; font-size: 10px; width: 100%; }
+            th { background: #ddd !important; color: black !important; border: 1px solid #000; }
+            td { border: 1px solid #000; padding: 5px; }
+            .evidence-thumb { height: 40px; width: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="login-wrapper">
+        <div class="login-card">
+            <img src="https://z-cdn-media.chatglm.cn/files/37b41b25-6da1-4692-901b-7113056df98b.png?auth_key=1872203797-ec8a0211e06b4c2198c2c41273b821a5-0-cecd7109e826cac74f4bcb55e2e34ad5" alt="Logo Sekolah" class="school-logo-lg">
+            <h2 style="margin: 0 0 5px; color: var(--primary);">SMK N 14 Samarinda</h2>
+            <p style="color: #7f8c8d; margin-bottom: 25px; font-size: 0.9rem;">Sistem Jurnal Pelanggaran AKL</p>
+            
+            <div class="form-group">
+                <input type="password" id="passInput" placeholder="Masukkan Password (Guru123)" onkeypress="handleEnter(event)">
+            </div>
+            
+            <button class="btn" onclick="login()">Masuk Aplikasi</button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="app-container hidden">
+        
+        <!-- Header -->
+        <header>
+            <div class="header-brand">
+                <img src="https://z-cdn-media.chatglm.cn/files/37b41b25-6da1-4692-901b-7113056df98b.png?auth_key=1872203797-ec8a0211e06b4c2198c2c41273b821a5-0-cecd7109e826cac74f4bcb55e2e34ad5" alt="Logo" class="header-logo">
+                <div class="header-title">
+                    <h1>Dashboard Pelanggaran Siswa</h1>
+                    <p>Jurusan Akuntansi & Keuangan Lembaga</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="clock-display" id="realTimeClock">00:00:00</div>
+                <button class="btn btn-danger" style="width: auto;" onclick="logout()">Keluar</button>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            
+            <!-- Left: Input Form -->
+            <div class="flex flex-col gap-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>📝 Input Pelanggaran</h3>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Pilih Kelas</label>
+                        <select id="selectKelas" onchange="updateSiswa()">
+                            <option value="">-- Pilih Kelas --</option>
+                            <option value="X AKL 1">X AKL 1</option>
+                            <option value="X AKL 2">X AKL 2</option>
+                            <option value="XI AKL 1">XI AKL 1</option>
+                            <option value="XI AKL 2">XI AKL 2</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Nama Siswa</label>
+                        <select id="selectSiswa" onchange="checkStudentStats()" disabled>
+                            <option value="">-- Pilih Kelas Dulu --</option>
+                        </select>
+                        
+                        <div id="studentStatsPreview" class="mt-2 text-center hidden" style="background: #eaf2f1; padding: 10px; border-radius: 8px;">
+                            <small>Total Poin Saat Ini:</small>
+                            <div style="font-size: 1.2rem; font-weight: bold; color: var(--danger);" id="currentStudentPoints">0</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bukti Foto (Barang Bukti)</label>
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="buktiFoto" accept="image/*" onchange="previewFile()">
+                            <img id="imgPreview" class="preview-img" alt="Preview">
+                            <span id="uploadText">Klik atau seret foto ke sini</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Jenis Pelanggaran</label>
+                        
+                        <!-- Ringan -->
+                        <div class="violation-group" style="border-left: 4px solid var(--success);">
+                            <div class="violation-group-title"><span style="color: var(--success);">Ringan (5 Poin)</span></div>
+                            <div class="violation-items">
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Terlambat masuk" data-cat="Ringan"> Terlambat masuk</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Seragam tidak lengkap" data-cat="Ringan"> Seragam tidak lengkap</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Rambut tidak rapi" data-cat="Ringan"> Rambut tidak rapi/mewarnai</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Bawa HP tanpa izin" data-cat="Ringan"> Bawa HP tanpa izin</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Mencoret fasilitas" data-cat="Ringan"> Mencoret fasilitas</label>
+                            </div>
+                        </div>
+
+                        <!-- Sedang -->
+                        <div class="violation-group" style="border-left: 4px solid var(--warning);">
+                            <div class="violation-group-title"><span style="color: var(--warning);">Sedang (20 Poin)</span></div>
+                            <div class="violation-items">
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Membolos" data-cat="Sedang"> Membolos</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Makan/Tidur di kelas" data-cat="Sedang"> Makan/Tidur di kelas</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Mengganggu teman" data-cat="Sedang"> Mengganggu teman</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Berhias berlebihan" data-cat="Sedang"> Berhias berlebihan</label>
+                            </div>
+                        </div>
+
+                        <!-- Berat -->
+                        <div class="violation-group" style="border-left: 4px solid var(--danger);">
+                            <div class="violation-group-title"><span style="color: var(--danger);">Berat (50 Poin)</span></div>
+                            <div class="violation-items">
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Merokok/Minuman keras" data-cat="Berat"> Rokok/Minuman keras</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Bawa senjata tajam" data-cat="Berat"> Bawa senjata tajam</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Konten porno" data-cat="Berat"> Konten porno</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Bullying/Kekerasan" data-cat="Berat"> Bullying/Kekerasan</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Tawuran" data-cat="Berat"> Tawuran</label>
+                                <label class="checkbox-label"><input type="checkbox" name="pelanggaran" value="Narkoba" data-cat="Berat"> Narkoba</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Catatan Tambahan</label>
+                        <textarea id="keterangan" rows="2" placeholder="Detail kejadian..."></textarea>
+                    </div>
+
+                    <button class="btn" onclick="simpanData()">💾 Simpan Data</button>
+                    <button class="btn btn-outline mt-2" onclick="resetForm()">↺ Reset Form</button>
+                </div>
+
+                <!-- Backup Section -->
+                <div class="card" style="background: #f8f9fa; border: 1px dashed #bdc3c7;">
+                    <div class="card-header" style="border: none; padding-bottom: 5px;">
+                        <h3 style="font-size: 1rem;">💾 Manajemen Data</h3>
+                    </div>
+                    <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Agar data tidak hilang saat cache browser dibersihkan, silakan backup data secara berkala.</p>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="backupData()" style="font-size: 0.8rem;">Download Backup</button>
+                        <input type="file" id="restoreFile" style="display: none;" onchange="restoreData(this)">
+                        <button class="btn btn-danger" onclick="document.getElementById('restoreFile').click()" style="font-size: 0.8rem;">Restore Data</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>📊 Jurnal Pelanggaran</h3>
+                    <div id="actionButtons" class="btn-group" style="margin-top: 0;">
+                        <button class="btn btn-secondary" onclick="exportExcel()" style="width: auto; font-size: 0.85rem;">📊 Unduh Excel</button>
+                        <button class="btn btn-outline" onclick="window.print()" style="width: auto; font-size: 0.85rem;">🖨️ Cetak PDF</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="tabelPelanggaran">
+                        <thead>
+                            <tr>
+                                <th style="width: 90px;">Waktu</th>
+                                <th style="width: 180px;">Siswa</th>
+                                <th>Pelanggaran & Bukti</th>
+                                <th style="width: 70px; text-align: center;">Poin</th>
+                                <th style="width: 50px; text-align: center;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                    
+                    <div id="emptyState" class="empty-state">
+                        <svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                        <p>Belum ada data pelanggaran.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA SOURCE ---
+        const dataSiswa = {
+            "X AKL 1": [
+                "ADDIN KAMILA PUTRI", "AIRA", "ANDHIKA RAHMAN", "ANITA APRILIA", 
+                "ANNISA WIDYASTUTI RAMADANI", "AZKIYA LUBNA KHABIBAH", "CELSYA ERINDA", 
+                "CHACHA AIRYNA RATASYA", "CHIKA FERNANDA PUTRI", "CINDY ALVIONITA", 
+                "FANIA TARUKALLO TANDI PAYUNG D", "FIRZI LUVIEANY MAULIDIYAH PUTRI", 
+                "GLENIS NATALIA OKTANELLA", "HILLARY GLORIA BRILLIANTA", "I'IN AYU PUTRI", 
+                "IZAR ADILLA RAHMAN", "JUNI HARTATI", "KAYLA ADICTY AZ ZAHRA", 
+                "LINDSAY GLORIA EUGENICE", "M DENIS AL FITRIANUR", "MAYSABAT JANATUN NISA", 
+                "MUHAMMAD FATHAN KURNIAWAN", "NABILA RAHMADANI", "NATASYA AULIA", 
+                "NAURA PUTRI APRISANDY", "NAZWA AULIA RAHMAT", "NIKITA OLIVIA PUTRI", 
+                "RAHMAH", "RENI AGUSTINA", "SAVERIUS KORI KOLO ULE", 
+                "SHIFA REZKYLA RAHMAN", "SITI INDRA NURAINI", "SUCI PUTRI ARINI SARI", 
+                "WINDRIYANI ALLO PADANG", "ZALSA AUREL NATASYA SUFIAN", "ZIANKA SALSABILA"
+            ],
+            "X AKL 2": ["A. BESSE HASMIANTI", "ADELITA MULANDARI", "ANIS AMIROH", "AQBAL AHMAD ZULFHA", "ARTA WIDIA ARUM", "ASYIFAH MUHAMMAD ASKAR", "CHAIRANI LATHIFAH AZHARI", "DHEBY KIRANA WIDU", "EMONIA ANNISA PUTRI", "FAIZ TEJO KUSUMA ATMADJA", "FANNI RISKIANA", "GRADINI KASISA KASTAR", "HESTI SURYA FEBRIANA", "HULWA NUR SALSABILA", "KEYSA AULIA PUTRI", "KEVIN TSAQIF INDRAWAN", "MASYA MENTARY", "MELATI DWI RAMADHANI", "MERLIN NAISYLA MAHARANI", "MUHAMMAD FADLY", "MUHAMMAD LUTFHI TAUFIQ", "NADIA AURAHMAH", "NASWA AFIRA PUTRI", "NATASYA AVRILIA SAFITRI", "NOVITA NUR IRAWAN", "NUR SILFIANA", "OKTAVIA NUR AZIZAH", "RINA APRILIA", "RISTY AULIA", "SAFA JULIANTIKA", "SANIAH SALSABILLAH", "SEPTYA VILLA ANGGRANI", "SHOFIYATUN SYA'BANIAH", "SYIFFA SYAUQITTAQWA", "ZILVI ANGELIKA SAPUTRI", "ZIVANA MALEVANI NINDITYA"],
+            "XI AKL 1": ["AFIQAH NUR ZAHRA", "ALIFA NUR AQILA", "ANDINI", "ARNESYA VIANKA", "AYU MARETA SARI", "AZIZAH RINDA DEWI", "BUNGA LESTARI MASA", "CAHAYA QUD ILLONA", "CAMELIA RAHMADANI", "GRESYA PUTRI", "HAIDIR ALI", "HIZKIA IMMANUEL SITINJAK", "INDAH INDRIANA", "JESICA STARLA WULANDARI", "KAILA ANASIVA RAMADANIA", "KHAREN ANANDITHA ZAHARANIE", "KHUMAIRAH SRI ANGRAINI PUTRI", "MUHAMMAD DIMAS", "NABILA ASYFA PUTRI", "NANDA ALYSSA RAHMAYANTI", "NAYLA OLIVIA", "NIA ANGGRAENI", "NUR HALIMAH", "PUTRI DEWI PRATAMA", "RASMI ADELIA", "RIZKY AFRIZA SETIAWAN", "ROZWA SALSABILA", "SAFINA KARNITA SARI", "SULFIANI WANDANI", "TIARA SHEILLA RAHAYU", "VIRDA APRILIA", "ZITA HASSYA NITYA"],
+            "XI AKL 2": ["ADHELIA", "ADINDA NURUL KAMARATIH", "ALVIONITA PALILU", "ALYA KIERA NABILA", "AURA HADIJA NOVIANTI", "AURA JULIANSYAH", "CITRA TANDI RERUNG", "CRISTIANI RISCHA MINA", "DHIYA NASYWA ULFANANDA", "HASNIA RAHMADANI", "ISTIQOMAH", "JUMAINAH SULMI", "KEYLA ANDISA AULIA", "KHUSNUL KHOTIMAH", "MELODYANA PUTRI", "MUHAMMAD ERVAN KURNIAWAN", "MUHAMMAD FEBRIANSYAH", "NABILA NUR RAMADHANI", "NADIA NAZLIA", "NATASYA AULIA DIAN PRAHESTI", "RAYHANA TUZ ZAHRA", "RAZIF IBNU MAJID", "RISMA MEILISA", "SAFIRA INAYAH", "SAIFUL RAMADHAN", "SUCHI RAHMADANIAH", "VINA JUNITA", "WULAN AYU RAHMADHANI", "YULIANI SITI MAISAROH", "ZAHRA EMILIA", "ZULFA KHOIRONI"]
+        };
+
+        let pelanggaranLog = JSON.parse(localStorage.getItem('akl_violation_log_final')) || [];
+
+        const els = {
+            loginOverlay: document.getElementById('loginOverlay'),
+            mainApp: document.getElementById('mainApp'),
+            passInput: document.getElementById('passInput'),
+            selectKelas: document.getElementById('selectKelas'),
+            selectSiswa: document.getElementById('selectSiswa'),
+            keterangan: document.getElementById('keterangan'),
+            tableBody: document.getElementById('tableBody'),
+            emptyState: document.getElementById('emptyState'),
+            currentDate: document.getElementById('currentDate'),
+            studentStatsPreview: document.getElementById('studentStatsPreview'),
+            currentStudentPoints: document.getElementById('currentStudentPoints'),
+            toastContainer: document.getElementById('toastContainer'),
+            buktiFoto: document.getElementById('buktiFoto'),
+            imgPreview: document.getElementById('imgPreview'),
+            uploadText: document.getElementById('uploadText'),
+            clock: document.getElementById('realTimeClock')
+        };
+
+        // --- CLOCK ---
+        setInterval(() => {
+            const now = new Date();
+            els.clock.innerText = now.toLocaleTimeString('id-ID');
+        }, 1000);
+
+        window.onload = () => {
+            renderTable();
+        };
+
+        // --- AUTH (FIXED PASSWORD) ---
+        function handleEnter(e) { if(e.key === 'Enter') login(); }
+        
+        function login() {
+            // Mengambil nilai input dan menghapus spasi di awal/akhir
+            const pass = els.passInput.value.trim(); 
+            
+            // Cek Password Case Sensitive: "Guru123"
+            if(pass === "Guru123") {
+                els.loginOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    els.loginOverlay.classList.add('hidden');
+                    els.mainApp.classList.remove('hidden');
+                }, 500);
+                showToast("Selamat Datang!", "success");
+            } else {
+                showToast("Password Salah! Gunakan: Guru123", "error");
+                els.passInput.value = "";
+                els.passInput.focus();
+            }
+        }
+
+        function logout() { if(confirm("Keluar aplikasi?")) location.reload(); }
+
+        // --- FORM LOGIC ---
+        function updateSiswa() {
+            const kelas = els.selectKelas.value;
+            els.selectSiswa.innerHTML = '<option value="">-- Pilih Nama Siswa --</option>';
+            if(kelas) {
+                els.selectSiswa.disabled = false;
+                dataSiswa[kelas].forEach(nama => {
+                    const opt = document.createElement('option');
+                    opt.value = nama;
+                    opt.innerText = nama;
+                    els.selectSiswa.appendChild(opt);
+                });
+            } else {
+                els.selectSiswa.disabled = true;
+                els.studentStatsPreview.classList.add('hidden');
+            }
+        }
+
+        function checkStudentStats() {
+            const nama = els.selectSiswa.value;
+            if(!nama) { els.studentStatsPreview.classList.add('hidden'); return; }
+            const total = pelanggaranLog.filter(log => log.nama === nama).reduce((sum, log) => sum + log.poin, 0);
+            els.currentStudentPoints.innerText = total;
+            if(total >= 100) els.currentStudentPoints.style.color = "var(--danger)";
+            else if(total >= 50) els.currentStudentPoints.style.color = "var(--warning)";
+            else els.currentStudentPoints.style.color = "var(--primary)";
+            els.studentStatsPreview.classList.remove('hidden');
+        }
+
+        // --- IMAGE UPLOAD ---
+        function previewFile() {
+            const file = els.buktiFoto.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    els.imgPreview.src = e.target.result;
+                    els.imgPreview.style.display = 'block';
+                    els.uploadText.style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                els.imgPreview.style.display = 'none';
+                els.uploadText.style.display = 'block';
+            }
+        }
+
+        function resetForm() {
+            els.selectKelas.value = "";
+            els.selectSiswa.innerHTML = '<option value="">-- Pilih Kelas Dulu --</option>';
+            els.selectSiswa.disabled = true;
+            els.keterangan.value = "";
+            els.studentStatsPreview.classList.add('hidden');
+            els.buktiFoto.value = "";
+            els.imgPreview.style.display = 'none';
+            els.uploadText.style.display = 'block';
+            
+            document.querySelectorAll('input[name="pelanggaran"]').forEach(el => el.checked = false);
+        }
+
+        // --- CORE LOGIC ---
+        function simpanData() {
+            const nama = els.selectSiswa.value;
+            const kelas = els.selectKelas.value;
+            const ket = els.keterangan.value.trim();
+            const fileInput = els.buktiFoto;
+
+            if(!nama || !kelas) return showToast("Pilih Siswa & Kelas!", "error");
+
+            const checkedBoxes = document.querySelectorAll('input[name="pelanggaran"]:checked');
+            if(checkedBoxes.length === 0) return showToast("Centang minimal satu pelanggaran!", "error");
+
+            let violations = [];
+            let maxSeverity = 0; // 1=Ringan, 2=Sedang, 3=Berat
+            
+            checkedBoxes.forEach(box => {
+                violations.push(box.value);
+                const severity = box.getAttribute('data-cat');
+                if(severity === 'Berat') maxSeverity = 3;
+                else if(severity === 'Sedang' && maxSeverity < 2) maxSeverity = 2;
+                else if(severity === 'Ringan' && maxSeverity < 1) maxSeverity = 1;
+            });
+
+            let poin = 0;
+            let kategori = "";
+            
+            if(maxSeverity === 3) { poin = 50; kategori = "Berat"; }
+            else if(maxSeverity === 2) { poin = 20; kategori = "Sedang"; }
+            else { poin = 5; kategori = "Ringan"; }
+
+            // Handle Image Base64
+            let fotoData = null;
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fotoData = e.target.result;
+                    saveToLog(nama, kelas, kategori, poin, violations, ket, fotoData);
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                saveToLog(nama, kelas, kategori, poin, violations, ket, null);
+            }
+        }
+
+        function saveToLog(nama, kelas, kategori, poin, violations, ket, fotoData) {
+            const newData = {
+                id: Date.now(),
+                waktu: new Date().toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}),
+                tanggal: new Date().toLocaleDateString('id-ID'),
+                nama: nama,
+                kelas: kelas,
+                kategori: kategori,
+                poin: poin,
+                detail: violations.join(", "),
+                keterangan: ket,
+                foto: fotoData
+            };
+
+            pelanggaranLog.unshift(newData);
+            localStorage.setItem('akl_violation_log_final', JSON.stringify(pelanggaranLog));
+
+            renderTable();
+            checkStudentStats();
+            showToast("Data Disimpan!", "success");
+            
+            els.selectSiswa.value = "";
+            els.keterangan.value = "";
+            els.buktiFoto.value = "";
+            els.imgPreview.style.display = 'none';
+            els.uploadText.style.display = 'block';
+            document.querySelectorAll('input[name="pelanggaran"]').forEach(el => el.checked = false);
+            els.studentStatsPreview.classList.add('hidden');
+        }
+
+        function hapusData(id) {
+            if(confirm("Hapus data ini?")) {
+                pelanggaranLog = pelanggaranLog.filter(item => item.id !== id);
+                localStorage.setItem('akl_violation_log_final', JSON.stringify(pelanggaranLog));
+                renderTable();
+            }
+        }
+
+        function renderTable() {
+            els.tableBody.innerHTML = "";
+            if(pelanggaranLog.length === 0) {
+                els.emptyState.classList.remove('hidden');
+                return;
+            } else {
+                els.emptyState.classList.add('hidden');
+            }
+
+            pelanggaranLog.forEach(log => {
+                const row = document.createElement('tr');
+                let badgeClass = log.kategori === 'Ringan' ? 'badge-ringan' : (log.kategori === 'Sedang' ? 'badge-sedang' : 'badge-berat');
+                let fotoHtml = log.foto ? `<img src="${log.foto}" class="evidence-thumb" onclick="window.open(this.src)">` : '<span style="color:#ccc; font-size:0.8rem;">Tidak ada foto</span>';
+
+                row.innerHTML = `
+                    <td><span style="font-family:monospace; color:#7f8c8d; font-size:0.85rem;">${log.waktu}<br><small>${log.tanggal}</small></span></td>
+                    <td>
+                        <div style="font-weight:600;">${log.nama}</div>
+                        <div style="font-size:0.8rem; color:#999;">${log.kelas}</div>
+                    </td>
+                    <td>
+                        <span class="badge ${badgeClass}" style="margin-bottom:4px;">${log.kategori}</span>
+                        <div style="font-size:0.85rem; margin-bottom:5px;">${log.detail}</div>
+                        ${fotoHtml}
+                        ${log.keterangan ? `<div style="font-size:0.8rem; color:#666; font-style:italic; margin-top:4px;">"${log.keterangan}"</div>` : ''}
+                    </td>
+                    <td style="text-align:center; font-weight:bold; color:var(--primary);">${log.poin}</td>
+                    <td style="text-align:center;">
+                        <button onclick="hapusData(${log.id})" style="background:none; border:none; cursor:pointer; color:#e74c3c;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </td>
+                `;
+                els.tableBody.appendChild(row);
+            });
+        }
+
+        // --- EXPORT & BACKUP ---
+        function exportExcel() {
+            // Prepare data for Excel (without image blobs for simplicity in cells)
+            const dataToExport = pelanggaranLog.map(item => ({
+                Waktu: item.waktu + " " + item.tanggal,
+                Nama: item.nama,
+                Kelas: item.kelas,
+                Kategori: item.kategori,
+                Poin: item.poin,
+                Detail: item.detail,
+                Catatan: item.keterangan,
+                Ada_Foto: item.foto ? "Ya" : "Tidak"
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Jurnal Pelanggaran");
+            XLSX.writeFile(wb, "Jurnal_Pelanggaran_SMK14.xlsx");
+            showToast("Excel berhasil diunduh!", "success");
+        }
+
+        function backupData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(pelanggaranLog));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "backup_jurnal_" + new Date().toISOString().slice(0,10) + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function restoreData(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if(Array.isArray(data)) {
+                        pelanggaranLog = data;
+                        localStorage.setItem('akl_violation_log_final', JSON.stringify(pelanggaranLog));
+                        renderTable();
+                        showToast("Data berhasil dipulihkan!", "success");
+                    } else {
+                        showToast("Format file salah!", "error");
+                    }
+                } catch(err) {
+                    showToast("Gagal membaca file!", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showToast(msg, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let icon = type === 'success' 
+                ? '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+                : '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+            toast.innerHTML = `${icon} <span>${msg}</span>`;
+            els.toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
